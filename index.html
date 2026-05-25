@@ -1,0 +1,95 @@
+<!doctype html>
+<html lang="ko">
+  <head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>데이트 플래너</title>
+    <link rel="stylesheet" href="style.css">
+  </head>
+  <body>
+    <main class="app-shell">
+      <section class="planner">
+        <header class="topbar">
+          <div>
+            <p class="eyebrow">둘만의 일정 보드</p>
+            <h1>데이트 플래너</h1>
+          </div>
+          <div class="top-actions">
+            <button id="copyShareBtn" type="button">공유 링크</button>
+            <button id="exportBtn" type="button">백업</button>
+            <label class="file-button">
+              불러오기
+              <input id="importInput" type="file" accept="application/json">
+            </label>
+          </div>
+        </header>
+
+        <form id="planForm" class="plan-form">
+          <label>
+            제목
+            <input id="titleInput" type="text" placeholder="예: 성수동 전시 보고 저녁" required>
+          </label>
+          <label>
+            날짜
+            <input id="dateInput" type="date" required>
+          </label>
+          <label>
+            시간
+            <input id="timeInput" type="time">
+          </label>
+          <label>
+            장소
+            <input id="placeInput" type="text" placeholder="예: 서울숲역 3번 출구">
+          </label>
+          <label class="wide">
+            메모
+            <textarea id="memoInput" rows="3" placeholder="예약번호, 준비물, 하고 싶은 말"></textarea>
+          </label>
+          <div class="form-actions wide">
+            <button id="submitBtn" type="submit">일정 추가</button>
+            <button id="cancelEditBtn" type="button" class="secondary" hidden>수정 취소</button>
+          </div>
+        </form>
+
+        <section class="filters" aria-label="일정 필터">
+          <button type="button" class="active" data-filter="all">전체</button>
+          <button type="button" data-filter="todo">예정</button>
+          <button type="button" data-filter="done">완료</button>
+        </section>
+
+        <section id="emptyState" class="empty-state">
+          <h2>첫 데이트 일정을 추가해보세요.</h2>
+          <p>입력한 내용은 이 브라우저에 자동 저장되고, 공유 링크나 JSON 파일로 상대에게 전달할 수 있어요.</p>
+        </section>
+
+        <section id="plansList" class="plans-list" aria-live="polite"></section>
+      </section>
+    </main>
+
+    <template id="planTemplate">
+      <article class="plan-card">
+        <div class="plan-date">
+          <span class="month"></span>
+          <strong class="day"></strong>
+          <span class="weekday"></span>
+        </div>
+        <div class="plan-body">
+          <div class="plan-heading">
+            <h2></h2>
+            <span class="status"></span>
+          </div>
+          <p class="meta"></p>
+          <p class="memo"></p>
+          <div class="card-actions">
+            <button type="button" data-action="toggle">완료</button>
+            <button type="button" data-action="edit">수정</button>
+            <button type="button" data-action="delete" class="danger">삭제</button>
+          </div>
+        </div>
+      </article>
+    </template>
+
+    <div id="toast" class="toast" role="status" aria-live="polite"></div>
+    <script src="app.js"></script>
+  </body>
+</html>
