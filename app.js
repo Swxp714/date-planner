@@ -1,4 +1,5 @@
-const STORAGE_KEY = "date-planner-v1";
+const STORAGE_KEY = "date-planner-v2";
+
 const state = {
   plans: [],
   filter: "all",
@@ -17,48 +18,43 @@ const els = {
   plansList: document.querySelector("#plansList"),
   emptyState: document.querySelector("#emptyState"),
   template: document.querySelector("#planTemplate"),
-  filters: document.querySelector(".filters"),
-  copyShare: document.querySelector("#copyShareBtn"),
+  filters: document.querySelector(".toolbar"),
+  saveImage: document.querySelector("#saveImageBtn"),
   export: document.querySelector("#exportBtn"),
   importInput: document.querySelector("#importInput"),
-  toast: document.querySelector("#toast")
+  toast: document.querySelector("#toast"),
+  shareCount: document.querySelector("#shareCount"),
+  shareSummary: document.querySelector("#shareSummary"),
+  sharePreviewList: document.querySelector("#sharePreviewList")
 };
 
-const formatter = new Intl.DateTimeFormat("ko-KR", {
+const dateFormatter = new Intl.DateTimeFormat("ko-KR", {
   month: "short",
   day: "numeric",
   weekday: "short"
 });
 
+init();
+
 function init() {
-  loadFromHashOrStorage();
+  load();
   render();
   els.form.addEventListener("submit", onSubmit);
   els.cancelEdit.addEventListener("click", resetForm);
   els.filters.addEventListener("click", onFilter);
   els.plansList.addEventListener("click", onPlanAction);
-  els.copyShare.addEventListener("click", copyShareLink);
+  els.saveImage.addEventListener("click", savePlanImage);
   els.export.addEventListener("click", exportPlans);
   els.importInput.addEventListener("change", importPlans);
 }
 
-function loadFromHashOrStorage() {
-  const hashData = new URLSearchParams(location.hash.slice(1)).get("data");
-
-  if (hashData) {
-    try {
-      state.plans = normalizePlans(JSON.parse(decodeURIComponent(atob(hashData))));
-      save();
-      history.replaceState(null, "", location.pathname);
-      showToast("공유 링크의 일정을 불러왔어요.");
-      return;
-    } catch {
-      showToast("공유 링크를 읽지 못했어요.");
-    }
-  }
+function load() {
+  const oldData = localStorage.getItem("date-planner-v1");
+  const data = localStorage.getItem(STORAGE_KEY) || oldData || "[]";
 
   try {
-    state.plans = normalizePlans(JSON.parse(localStorage.getItem(STORAGE_KEY) || "[]"));
+    state.plans = normalizePlans(JSON.parse(data));
+    save();
   } catch {
     state.plans = [];
   }
@@ -82,6 +78,7 @@ function normalizePlans(plans) {
 
 function onSubmit(event) {
   event.preventDefault();
+
   const plan = {
     id: state.editingId || crypto.randomUUID(),
     title: els.title.value.trim(),
@@ -163,14 +160,13 @@ function render() {
   els.plansList.innerHTML = "";
   els.emptyState.hidden = plans.length > 0;
 
-  document.querySelectorAll(".filters button").forEach((button) => {
+  document.querySelectorAll(".toolbar button").forEach((button) => {
     button.classList.toggle("active", button.dataset.filter === state.filter);
   });
 
   plans.forEach((plan) => {
     const card = els.template.content.firstElementChild.cloneNode(true);
-    const date = parseLocalDate(plan.date);
-    const parts = Object.fromEntries(formatter.formatToParts(date).map((part) => [part.type, part.value]));
+    const parts = getDateParts(plan.date);
 
     card.dataset.id = plan.id;
     card.classList.toggle("done", plan.done);
@@ -184,23 +180,56 @@ function render() {
     card.querySelector('[data-action="toggle"]').textContent = plan.done ? "예정" : "완료";
     els.plansList.append(card);
   });
+
+  renderSharePreview();
+}
+
+function renderSharePreview() {
+  const plans = getSortedPlans().slice(0, 4);
+  const todoCount = state.plans.filter((plan) => !plan.done).length;
+  els.shareCount.textContent = String(todoCount);
+  els.shareSummary.textContent = todoCount
+    ? `남은 약속 ${todoCount}개를 정리했어요.`
+    : "일정을 추가하면 공유 이미지에 자동 반영됩니다.";
+  els.sharePreviewList.innerHTML = "";
+
+  plans.forEach((plan) => {
+    const row = document.createElement("div");
+    row.className = "share-mini";
+    row.innerHTML = `<strong></strong><span></span>`;
+    row.querySelector("strong").textContent = plan.title;
+    row.querySelector("span").textContent = `${formatShortDate(plan.date)} · ${buildMeta(plan)}`;
+    els.sharePreviewList.append(row);
+  });
 }
 
 function getVisiblePlans() {
-  return state.plans
-    .filter((plan) => {
-      if (state.filter === "todo") return !plan.done;
-      if (state.filter === "done") return plan.done;
-      return true;
-    })
-    .sort((a, b) => `${a.date} ${a.time}`.localeCompare(`${b.date} ${b.time}`));
+  return getSortedPlans().filter((plan) => {
+    if (state.filter === "todo") return !plan.done;
+    if (state.filter === "done") return plan.done;
+    return true;
+  });
+}
+
+function getSortedPlans() {
+  return [...state.plans].sort((a, b) => `${a.date} ${a.time}`.localeCompare(`${b.date} ${b.time}`));
 }
 
 function buildMeta(plan) {
   const details = [];
   if (plan.time) details.push(plan.time);
   if (plan.place) details.push(plan.place);
-  return details.length ? details.join(" / ") : "시간과 장소 미정";
+  return details.length ? details.join(" · ") : "시간과 장소 미정";
+}
+
+function getDateParts(value) {
+  const parts = dateFormatter.formatToParts(parseLocalDate(value));
+  return Object.fromEntries(parts.map((part) => [part.type, part.value]));
+}
+
+function formatShortDate(value) {
+  const parts = getDateParts(value);
+  return `${parts.month} ${parts.day}일 ${parts.weekday}`;
 }
 
 function parseLocalDate(value) {
@@ -212,18 +241,6 @@ function save() {
   localStorage.setItem(STORAGE_KEY, JSON.stringify(state.plans));
 }
 
-async function copyShareLink() {
-  const payload = btoa(encodeURIComponent(JSON.stringify(state.plans)));
-  const url = `${location.origin}${location.pathname}#data=${payload}`;
-
-  try {
-    await navigator.clipboard.writeText(url);
-    showToast("공유 링크를 복사했어요.");
-  } catch {
-    prompt("이 링크를 복사해서 공유하세요.", url);
-  }
-}
-
 function exportPlans() {
   const blob = new Blob([JSON.stringify(state.plans, null, 2)], { type: "application/json" });
   const url = URL.createObjectURL(blob);
@@ -233,7 +250,7 @@ function exportPlans() {
   link.download = "date-plans.json";
   link.click();
   URL.revokeObjectURL(url);
-  showToast("JSON 백업 파일을 만들었어요.");
+  showToast("JSON 파일로 저장했어요.");
 }
 
 function importPlans(event) {
@@ -246,7 +263,7 @@ function importPlans(event) {
       state.plans = normalizePlans(JSON.parse(reader.result));
       save();
       render();
-      showToast("백업 파일을 불러왔어요.");
+      showToast("일정을 불러왔어요.");
     } catch {
       showToast("JSON 파일을 읽지 못했어요.");
     }
@@ -255,11 +272,148 @@ function importPlans(event) {
   event.target.value = "";
 }
 
+async function savePlanImage() {
+  if (document.fonts) {
+    await document.fonts.ready;
+  }
+
+  const plans = getSortedPlans();
+  const canvas = document.createElement("canvas");
+  const width = 1200;
+  const rowHeight = 128;
+  const height = Math.max(760, 420 + Math.min(plans.length, 6) * rowHeight);
+  const ctx = canvas.getContext("2d");
+
+  canvas.width = width;
+  canvas.height = height;
+
+  drawImageCard(ctx, width, height, plans.slice(0, 6));
+
+  const link = document.createElement("a");
+  link.download = "date-plan.png";
+  link.href = canvas.toDataURL("image/png");
+  link.click();
+  showToast("공유용 이미지를 저장했어요.");
+}
+
+function drawImageCard(ctx, width, height, plans) {
+  const gradient = ctx.createLinearGradient(0, 0, width, height);
+  gradient.addColorStop(0, "#11121a");
+  gradient.addColorStop(0.55, "#07080c");
+  gradient.addColorStop(1, "#15101a");
+  ctx.fillStyle = gradient;
+  ctx.fillRect(0, 0, width, height);
+
+  drawGlow(ctx, 170, 80, 270, "rgba(124, 92, 255, 0.28)");
+  drawGlow(ctx, 1040, 120, 240, "rgba(255, 92, 138, 0.22)");
+  drawGlow(ctx, 960, 650, 220, "rgba(103, 232, 201, 0.13)");
+
+  ctx.fillStyle = "#67e8c9";
+  ctx.font = imageFont(28, 700);
+  ctx.fillText("PRIVATE DATE PLAN", 76, 92);
+
+  ctx.fillStyle = "#f7f7fb";
+  ctx.font = imageFont(76, 700);
+  wrapText(ctx, "우리의 다음 약속", 72, 178, 760, 86);
+
+  ctx.fillStyle = "#a2a5b1";
+  ctx.font = imageFont(30, 400);
+  ctx.fillText(`${new Date().toLocaleDateString("ko-KR")} 저장`, 76, 264);
+
+  ctx.fillStyle = "rgba(255,255,255,0.08)";
+  roundRect(ctx, 850, 68, 270, 138, 16);
+  ctx.fill();
+  ctx.fillStyle = "#f7f7fb";
+  ctx.font = imageFont(62, 700);
+  ctx.fillText(String(plans.filter((plan) => !plan.done).length), 890, 150);
+  ctx.fillStyle = "#a2a5b1";
+  ctx.font = imageFont(24, 400);
+  ctx.fillText("남은 일정", 975, 150);
+
+  if (!plans.length) {
+    ctx.fillStyle = "rgba(255,255,255,0.08)";
+    roundRect(ctx, 76, 350, width - 152, 170, 16);
+    ctx.fill();
+    ctx.fillStyle = "#f7f7fb";
+    ctx.font = imageFont(34, 700);
+    ctx.fillText("아직 일정이 없어요.", 118, 420);
+    ctx.fillStyle = "#a2a5b1";
+    ctx.font = imageFont(26, 400);
+    ctx.fillText("웹에서 일정을 추가한 뒤 다시 저장해보세요.", 118, 468);
+    return;
+  }
+
+  plans.forEach((plan, index) => {
+    const y = 340 + index * 128;
+    const parts = getDateParts(plan.date);
+    ctx.fillStyle = "rgba(255,255,255,0.07)";
+    roundRect(ctx, 76, y, width - 152, 104, 16);
+    ctx.fill();
+    ctx.strokeStyle = "rgba(255,255,255,0.1)";
+    ctx.stroke();
+
+    ctx.fillStyle = plan.done ? "#7d808b" : "#ff5c8a";
+    ctx.font = imageFont(24, 700);
+    ctx.fillText(parts.month, 112, y + 34);
+    ctx.fillStyle = "#f7f7fb";
+    ctx.font = imageFont(44, 700);
+    ctx.fillText(parts.day, 112, y + 80);
+
+    ctx.fillStyle = plan.done ? "#a2a5b1" : "#f7f7fb";
+    ctx.font = imageFont(30, 700);
+    ctx.fillText(plan.title, 220, y + 42);
+
+    ctx.fillStyle = "#a2a5b1";
+    ctx.font = imageFont(24, 400);
+    ctx.fillText(`${parts.weekday} · ${buildMeta(plan)}`, 220, y + 78);
+  });
+}
+
+function imageFont(size, weight) {
+  return `${weight} ${size}px "Gowun Batang", "Nanum Myeongjo", "Noto Serif KR", Batang, serif`;
+}
+
+function drawGlow(ctx, x, y, radius, color) {
+  const gradient = ctx.createRadialGradient(x, y, 0, x, y, radius);
+  gradient.addColorStop(0, color);
+  gradient.addColorStop(1, "rgba(0,0,0,0)");
+  ctx.fillStyle = gradient;
+  ctx.fillRect(x - radius, y - radius, radius * 2, radius * 2);
+}
+
+function roundRect(ctx, x, y, width, height, radius) {
+  ctx.beginPath();
+  ctx.moveTo(x + radius, y);
+  ctx.arcTo(x + width, y, x + width, y + height, radius);
+  ctx.arcTo(x + width, y + height, x, y + height, radius);
+  ctx.arcTo(x, y + height, x, y, radius);
+  ctx.arcTo(x, y, x + width, y, radius);
+  ctx.closePath();
+}
+
+function wrapText(ctx, text, x, y, maxWidth, lineHeight) {
+  const words = text.split(" ");
+  let line = "";
+
+  words.forEach((word, index) => {
+    const next = line ? `${line} ${word}` : word;
+    if (ctx.measureText(next).width > maxWidth && line) {
+      ctx.fillText(line, x, y);
+      line = word;
+      y += lineHeight;
+    } else {
+      line = next;
+    }
+
+    if (index === words.length - 1) {
+      ctx.fillText(line, x, y);
+    }
+  });
+}
+
 function showToast(message) {
   els.toast.textContent = message;
   els.toast.classList.add("show");
   clearTimeout(showToast.timeout);
   showToast.timeout = setTimeout(() => els.toast.classList.remove("show"), 2200);
 }
-
-init();
