@@ -6,80 +6,102 @@
     <title>Date Plan</title>
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-    <link href="https://fonts.googleapis.com/css2?family=Gowun+Batang:wght@400;700&family=Nanum+Myeongjo:wght@400;700;800&display=swap" rel="stylesheet">
+    <link href="https://fonts.googleapis.com/css2?family=Press+Start+2P&display=swap" rel="stylesheet">
     <link rel="stylesheet" href="style.css">
   </head>
   <body>
     <main class="shell">
-      <section class="hero">
-        <div>
-          <p class="eyebrow">PRIVATE DATE BOARD</p>
-          <h1>둘만 보는 데이트 플래너</h1>
-          <p class="lead">일정을 정리하고, 예쁜 PNG 이미지로 저장해서 바로 보내세요.</p>
-        </div>
-        <div class="hero-actions">
-          <button id="saveImageBtn" type="button" class="primary">이미지 저장</button>
-          <button id="exportBtn" type="button">JSON 백업</button>
-          <label class="file-button">
-            불러오기
-            <input id="importInput" type="file" accept="application/json">
-          </label>
-        </div>
-      </section>
+      <div class="flower flower-a" aria-hidden="true"></div>
+      <div class="flower flower-b" aria-hidden="true"></div>
+      <div class="flower flower-c" aria-hidden="true"></div>
 
-      <section class="workspace">
-        <form id="planForm" class="plan-form">
-          <label>
-            제목
-            <input id="titleInput" type="text" placeholder="성수 전시 보고 저녁" required>
-          </label>
-          <label>
-            날짜
-            <input id="dateInput" type="date" required>
-          </label>
-          <label>
-            시간
-            <input id="timeInput" type="time">
-          </label>
-          <label>
-            장소
-            <input id="placeInput" type="text" placeholder="서울숲역 3번 출구">
-          </label>
-          <label class="wide">
-            메모
-            <textarea id="memoInput" rows="3" placeholder="예약번호, 준비물, 꼭 하고 싶은 것"></textarea>
-          </label>
-          <div class="form-actions wide">
-            <button id="submitBtn" type="submit" class="primary">일정 추가</button>
-            <button id="cancelEditBtn" type="button" hidden>수정 취소</button>
-          </div>
-        </form>
+      <section class="poster">
+        <nav class="top-nav" aria-label="메뉴">
+          <strong>dinolab</strong>
+          <span>our dates</span>
+          <span>who we are</span>
+          <span>save png</span>
+          <span>notes</span>
+        </nav>
 
-        <aside class="share-preview" aria-label="이미지 저장 미리보기">
-          <div id="shareCard" class="share-card">
-            <div class="share-head">
-              <span>DATE PLAN</span>
-              <strong id="shareCount">0</strong>
+        <section class="hero">
+          <div class="hero-copy">
+            <p class="eyebrow">DATE PLANNER & CREATIVE PROMISES.</p>
+            <h1>DATE PLAN<br>IS OUR ART</h1>
+            <p class="lead">둘이 정한 약속을 픽셀 포스터처럼 저장해서 보내는 작은 플래너.</p>
+            <div class="hero-actions">
+              <button id="saveImageBtn" type="button" class="primary">이미지 저장</button>
+              <button id="exportBtn" type="button">JSON 백업</button>
+              <label class="file-button">
+                불러오기
+                <input id="importInput" type="file" accept="application/json">
+              </label>
             </div>
-            <h2 id="shareTitle">우리의 다음 약속</h2>
-            <p id="shareSummary">일정을 추가하면 공유용 이미지에 자동 반영됩니다.</p>
-            <div id="sharePreviewList" class="share-preview-list"></div>
           </div>
-        </aside>
-      </section>
+          <div class="hero-art" aria-hidden="true">
+            <div class="cloud cloud-a"></div>
+            <div class="cloud cloud-b"></div>
+            <div class="pixel-dino">
+              <span></span><span></span><span></span><span></span>
+            </div>
+            <div class="skate"></div>
+          </div>
+        </section>
 
-      <section class="toolbar" aria-label="일정 필터">
-        <button type="button" class="active" data-filter="all">전체</button>
-        <button type="button" data-filter="todo">예정</button>
-        <button type="button" data-filter="done">완료</button>
-      </section>
+        <section class="workspace">
+          <form id="planForm" class="plan-form">
+            <label>
+              제목
+              <input id="titleInput" type="text" placeholder="성수 전시 보고 저녁" required>
+            </label>
+            <label>
+              날짜
+              <input id="dateInput" type="date" required>
+            </label>
+            <label>
+              시간
+              <input id="timeInput" type="time">
+            </label>
+            <label>
+              장소
+              <input id="placeInput" type="text" placeholder="서울숲역 3번 출구">
+            </label>
+            <label class="wide">
+              메모
+              <textarea id="memoInput" rows="3" placeholder="예약번호, 준비물, 꼭 하고 싶은 것"></textarea>
+            </label>
+            <div class="form-actions wide">
+              <button id="submitBtn" type="submit" class="primary">일정 추가</button>
+              <button id="cancelEditBtn" type="button" hidden>수정 취소</button>
+            </div>
+          </form>
 
-      <section id="emptyState" class="empty">
-        <h2>아직 일정이 없어요.</h2>
-        <p>첫 약속을 추가하면 아래에 정렬되고, 오른쪽 미리보기에서 공유 이미지로 저장할 수 있어요.</p>
-      </section>
+          <aside class="share-preview" aria-label="이미지 저장 미리보기">
+            <div id="shareCard" class="share-card">
+              <div class="share-head">
+                <span>POSTER PREVIEW</span>
+                <strong id="shareCount">0</strong>
+              </div>
+              <h2 id="shareTitle">우리의 다음 약속</h2>
+              <p id="shareSummary">일정을 추가하면 공유용 이미지에 자동 반영됩니다.</p>
+              <div id="sharePreviewList" class="share-preview-list"></div>
+            </div>
+          </aside>
+        </section>
 
-      <section id="plansList" class="plans" aria-live="polite"></section>
+        <section class="toolbar" aria-label="일정 필터">
+          <button type="button" class="active" data-filter="all">전체</button>
+          <button type="button" data-filter="todo">예정</button>
+          <button type="button" data-filter="done">완료</button>
+        </section>
+
+        <section id="emptyState" class="empty">
+          <h2>아직 일정이 없어요.</h2>
+          <p>첫 약속을 추가하면 아래에 정렬되고, 오른쪽 미리보기에 포스터처럼 쌓여요.</p>
+        </section>
+
+        <section id="plansList" class="plans" aria-live="polite"></section>
+      </section>
     </main>
 
     <template id="planTemplate">

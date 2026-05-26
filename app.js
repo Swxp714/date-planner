@@ -1,4 +1,4 @@
-const STORAGE_KEY = "date-planner-v2";
+const STORAGE_KEY = "date-planner-v3";
 
 const state = {
   plans: [],
@@ -49,7 +49,7 @@ function init() {
 }
 
 function load() {
-  const oldData = localStorage.getItem("date-planner-v1");
+  const oldData = localStorage.getItem("date-planner-v2") || localStorage.getItem("date-planner-v1");
   const data = localStorage.getItem(STORAGE_KEY) || oldData || "[]";
 
   try {
@@ -189,16 +189,16 @@ function renderSharePreview() {
   const todoCount = state.plans.filter((plan) => !plan.done).length;
   els.shareCount.textContent = String(todoCount);
   els.shareSummary.textContent = todoCount
-    ? `남은 약속 ${todoCount}개를 정리했어요.`
-    : "일정을 추가하면 공유 이미지에 자동 반영됩니다.";
+    ? `남은 약속 ${todoCount}개가 포스터에 담겨요.`
+    : "일정을 추가하면 공유용 이미지에 자동 반영됩니다.";
   els.sharePreviewList.innerHTML = "";
 
   plans.forEach((plan) => {
     const row = document.createElement("div");
     row.className = "share-mini";
-    row.innerHTML = `<strong></strong><span></span>`;
+    row.innerHTML = "<strong></strong><span></span>";
     row.querySelector("strong").textContent = plan.title;
-    row.querySelector("span").textContent = `${formatShortDate(plan.date)} · ${buildMeta(plan)}`;
+    row.querySelector("span").textContent = `${formatShortDate(plan.date)} / ${buildMeta(plan)}`;
     els.sharePreviewList.append(row);
   });
 }
@@ -219,7 +219,7 @@ function buildMeta(plan) {
   const details = [];
   if (plan.time) details.push(plan.time);
   if (plan.place) details.push(plan.place);
-  return details.length ? details.join(" · ") : "시간과 장소 미정";
+  return details.length ? details.join(" / ") : "시간과 장소 미정";
 }
 
 function getDateParts(value) {
@@ -275,120 +275,176 @@ function importPlans(event) {
 async function savePlanImage() {
   if (document.fonts) {
     await document.fonts.ready;
+    await document.fonts.load('64px "Press Start 2P"');
+    await document.fonts.load('42px "DungGeunMo"');
   }
 
-  const plans = getSortedPlans();
+  const plans = getSortedPlans().slice(0, 6);
   const canvas = document.createElement("canvas");
-  const width = 1200;
-  const rowHeight = 128;
-  const height = Math.max(760, 420 + Math.min(plans.length, 6) * rowHeight);
+  const width = 1080;
+  const height = Math.max(1420, 700 + plans.length * 132);
   const ctx = canvas.getContext("2d");
 
   canvas.width = width;
   canvas.height = height;
+  ctx.imageSmoothingEnabled = false;
 
-  drawImageCard(ctx, width, height, plans.slice(0, 6));
+  drawPosterImage(ctx, width, height, plans);
 
   const link = document.createElement("a");
-  link.download = "date-plan.png";
+  link.download = "date-plan-poster.png";
   link.href = canvas.toDataURL("image/png");
   link.click();
-  showToast("공유용 이미지를 저장했어요.");
+  showToast("픽셀 포스터 이미지를 저장했어요.");
 }
 
-function drawImageCard(ctx, width, height, plans) {
-  const gradient = ctx.createLinearGradient(0, 0, width, height);
-  gradient.addColorStop(0, "#11121a");
-  gradient.addColorStop(0.55, "#07080c");
-  gradient.addColorStop(1, "#15101a");
-  ctx.fillStyle = gradient;
+function drawPosterImage(ctx, width, height, plans) {
+  ctx.fillStyle = "#f2f2f0";
   ctx.fillRect(0, 0, width, height);
+  drawGrid(ctx, width, height, 24, "#deded8");
+  drawPinkRidge(ctx, 0, 252, width, 230);
+  drawFlower(ctx, 78, 84, 1.25);
+  drawFlower(ctx, width - 190, 178, 0.95);
+  drawFlower(ctx, width - 160, height - 260, 1.35);
 
-  drawGlow(ctx, 170, 80, 270, "rgba(124, 92, 255, 0.28)");
-  drawGlow(ctx, 1040, 120, 240, "rgba(255, 92, 138, 0.22)");
-  drawGlow(ctx, 960, 650, 220, "rgba(103, 232, 201, 0.13)");
+  ctx.fillStyle = "#080808";
+  ctx.font = imageFont(66, "Press Start 2P");
+  ctx.fillText("DATE PLAN", 72, 560);
+  ctx.fillText("IS OUR ART", 72, 642);
 
-  ctx.fillStyle = "#67e8c9";
-  ctx.font = imageFont(28, 700);
-  ctx.fillText("PRIVATE DATE PLAN", 76, 92);
+  ctx.font = imageFont(28, "DungGeunMo");
+  ctx.fillText("둘만 보는 약속 포스터", 78, 706);
 
-  ctx.fillStyle = "#f7f7fb";
-  ctx.font = imageFont(76, 700);
-  wrapText(ctx, "우리의 다음 약속", 72, 178, 760, 86);
+  drawCanvasDino(ctx, width - 300, 520);
 
-  ctx.fillStyle = "#a2a5b1";
-  ctx.font = imageFont(30, 400);
-  ctx.fillText(`${new Date().toLocaleDateString("ko-KR")} 저장`, 76, 264);
+  ctx.fillStyle = "#080808";
+  ctx.font = imageFont(22, "DungGeunMo");
+  wrapText(ctx, "일정을 추가하고 이미지 저장을 누르면, 이 포스터 그대로 보낼 수 있어요.", 78, 790, 760, 32);
 
-  ctx.fillStyle = "rgba(255,255,255,0.08)";
-  roundRect(ctx, 850, 68, 270, 138, 16);
-  ctx.fill();
-  ctx.fillStyle = "#f7f7fb";
-  ctx.font = imageFont(62, 700);
-  ctx.fillText(String(plans.filter((plan) => !plan.done).length), 890, 150);
-  ctx.fillStyle = "#a2a5b1";
-  ctx.font = imageFont(24, 400);
-  ctx.fillText("남은 일정", 975, 150);
+  ctx.fillStyle = "#ec4b9b";
+  ctx.fillRect(78, 868, 226, 92);
+  ctx.strokeStyle = "#080808";
+  ctx.lineWidth = 6;
+  ctx.strokeRect(78, 868, 226, 92);
+  ctx.fillStyle = "#080808";
+  ctx.font = imageFont(46, "Press Start 2P");
+  ctx.fillText(String(plans.filter((plan) => !plan.done).length), 104, 930);
+  ctx.font = imageFont(24, "DungGeunMo");
+  ctx.fillText("남은 일정", 184, 928);
 
   if (!plans.length) {
-    ctx.fillStyle = "rgba(255,255,255,0.08)";
-    roundRect(ctx, 76, 350, width - 152, 170, 16);
-    ctx.fill();
-    ctx.fillStyle = "#f7f7fb";
-    ctx.font = imageFont(34, 700);
-    ctx.fillText("아직 일정이 없어요.", 118, 420);
-    ctx.fillStyle = "#a2a5b1";
-    ctx.font = imageFont(26, 400);
-    ctx.fillText("웹에서 일정을 추가한 뒤 다시 저장해보세요.", 118, 468);
+    drawEmptyPoster(ctx);
     return;
   }
 
-  plans.forEach((plan, index) => {
-    const y = 340 + index * 128;
-    const parts = getDateParts(plan.date);
-    ctx.fillStyle = "rgba(255,255,255,0.07)";
-    roundRect(ctx, 76, y, width - 152, 104, 16);
-    ctx.fill();
-    ctx.strokeStyle = "rgba(255,255,255,0.1)";
+  plans.forEach((plan, index) => drawPosterPlan(ctx, plan, 78, 1025 + index * 132, width - 156));
+}
+
+function drawPosterPlan(ctx, plan, x, y, width) {
+  const parts = getDateParts(plan.date);
+  ctx.fillStyle = plan.done ? "#f8f8f5" : "#ec4b9b";
+  ctx.fillRect(x, y, width, 102);
+  ctx.strokeStyle = "#080808";
+  ctx.lineWidth = 6;
+  ctx.strokeRect(x, y, width, 102);
+
+  ctx.fillStyle = "#080808";
+  ctx.font = imageFont(22, "DungGeunMo");
+  ctx.fillText(parts.month, x + 22, y + 32);
+  ctx.font = imageFont(44, "Press Start 2P");
+  ctx.fillText(parts.day, x + 20, y + 82);
+
+  ctx.font = imageFont(32, "DungGeunMo");
+  ctx.fillText(plan.title, x + 142, y + 42);
+  ctx.font = imageFont(22, "DungGeunMo");
+  ctx.fillText(`${parts.weekday} / ${buildMeta(plan)}`, x + 142, y + 76);
+}
+
+function drawEmptyPoster(ctx) {
+  ctx.fillStyle = "#f8f8f5";
+  ctx.fillRect(78, 1025, 924, 150);
+  ctx.strokeStyle = "#080808";
+  ctx.lineWidth = 6;
+  ctx.strokeRect(78, 1025, 924, 150);
+  ctx.fillStyle = "#080808";
+  ctx.font = imageFont(34, "DungGeunMo");
+  ctx.fillText("아직 일정이 없어요.", 116, 1095);
+  ctx.font = imageFont(24, "DungGeunMo");
+  ctx.fillText("웹에서 첫 약속을 추가해보세요.", 116, 1140);
+}
+
+function drawGrid(ctx, width, height, size, color) {
+  ctx.strokeStyle = color;
+  ctx.lineWidth = 1;
+  for (let x = 0; x <= width; x += size) {
+    ctx.beginPath();
+    ctx.moveTo(x, 0);
+    ctx.lineTo(x, height);
     ctx.stroke();
-
-    ctx.fillStyle = plan.done ? "#7d808b" : "#ff5c8a";
-    ctx.font = imageFont(24, 700);
-    ctx.fillText(parts.month, 112, y + 34);
-    ctx.fillStyle = "#f7f7fb";
-    ctx.font = imageFont(44, 700);
-    ctx.fillText(parts.day, 112, y + 80);
-
-    ctx.fillStyle = plan.done ? "#a2a5b1" : "#f7f7fb";
-    ctx.font = imageFont(30, 700);
-    ctx.fillText(plan.title, 220, y + 42);
-
-    ctx.fillStyle = "#a2a5b1";
-    ctx.font = imageFont(24, 400);
-    ctx.fillText(`${parts.weekday} · ${buildMeta(plan)}`, 220, y + 78);
-  });
+  }
+  for (let y = 0; y <= height; y += size) {
+    ctx.beginPath();
+    ctx.moveTo(0, y);
+    ctx.lineTo(width, y);
+    ctx.stroke();
+  }
 }
 
-function imageFont(size, weight) {
-  return `${weight} ${size}px "Gowun Batang", "Nanum Myeongjo", "Noto Serif KR", Batang, serif`;
-}
-
-function drawGlow(ctx, x, y, radius, color) {
-  const gradient = ctx.createRadialGradient(x, y, 0, x, y, radius);
-  gradient.addColorStop(0, color);
-  gradient.addColorStop(1, "rgba(0,0,0,0)");
-  ctx.fillStyle = gradient;
-  ctx.fillRect(x - radius, y - radius, radius * 2, radius * 2);
-}
-
-function roundRect(ctx, x, y, width, height, radius) {
+function drawPinkRidge(ctx, x, y, width, height) {
+  ctx.fillStyle = "#ec4b9b";
   ctx.beginPath();
-  ctx.moveTo(x + radius, y);
-  ctx.arcTo(x + width, y, x + width, y + height, radius);
-  ctx.arcTo(x + width, y + height, x, y + height, radius);
-  ctx.arcTo(x, y + height, x, y, radius);
-  ctx.arcTo(x, y, x + width, y, radius);
+  ctx.moveTo(x, y + 90);
+  for (let px = 0; px <= width; px += 42) {
+    const peak = y + 40 + ((px / 42) % 3) * 18;
+    ctx.lineTo(px, peak);
+    ctx.lineTo(px + 21, peak + 36);
+  }
+  ctx.lineTo(width, y + height);
+  ctx.lineTo(x, y + height);
   ctx.closePath();
+  ctx.fill();
+}
+
+function drawFlower(ctx, x, y, scale) {
+  ctx.save();
+  ctx.translate(x, y);
+  ctx.scale(scale, scale);
+  ctx.strokeStyle = "#31b856";
+  ctx.lineWidth = 7;
+  [[0, 34], [34, 34], [17, 4], [17, 64]].forEach(([px, py]) => {
+    ctx.beginPath();
+    ctx.ellipse(px, py, 20, 28, 0, 0, Math.PI * 2);
+    ctx.stroke();
+  });
+  ctx.beginPath();
+  ctx.arc(17, 34, 12, 0, Math.PI * 2);
+  ctx.stroke();
+  ctx.restore();
+}
+
+function drawCanvasDino(ctx, x, y) {
+  ctx.fillStyle = "#31b856";
+  ctx.strokeStyle = "#080808";
+  ctx.lineWidth = 6;
+  ctx.fillRect(x + 32, y + 58, 156, 72);
+  ctx.strokeRect(x + 32, y + 58, 156, 72);
+  ctx.fillRect(x + 144, y + 4, 72, 72);
+  ctx.strokeRect(x + 144, y + 4, 72, 72);
+  ctx.fillRect(x, y + 78, 52, 32);
+  ctx.strokeRect(x, y + 78, 52, 32);
+  ctx.fillRect(x + 70, y + 128, 28, 48);
+  ctx.strokeRect(x + 70, y + 128, 28, 48);
+  ctx.fillRect(x + 142, y + 128, 28, 48);
+  ctx.strokeRect(x + 142, y + 128, 28, 48);
+  ctx.fillStyle = "#080808";
+  ctx.fillRect(x + 184, y + 28, 12, 12);
+  ctx.fillStyle = "#4a4a4a";
+  ctx.fillRect(x + 28, y + 178, 196, 26);
+  ctx.strokeRect(x + 28, y + 178, 196, 26);
+}
+
+function imageFont(size, family) {
+  return `${size}px "${family}", "DungGeunMo", monospace`;
 }
 
 function wrapText(ctx, text, x, y, maxWidth, lineHeight) {
